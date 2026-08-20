@@ -23,10 +23,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TransactionService {
 
-    @Autowired
     private TransactionRepository transactionRepository;
 
-    @Autowired
     private AccountServiceClient accountServiceClient;
 
     private static final String TRANSACTION_INITIATED_TOPIC = "transaction.initiated";
