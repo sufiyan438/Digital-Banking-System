@@ -26,7 +26,7 @@ public class CreateAccountRequest {
     @NotBlank(message = "Phone number is required for contact")
     private String phone;
 
-    @NotBlank(message = "Account type should be specified")
+    @NotNull(message = "Account type should be specified")
     private AccountType accountType;
 
     @NotNull(message = "Initial deposit is required")

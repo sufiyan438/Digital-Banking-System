@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountService {
 
-    private AccountRepository accountRepository;
+    private final AccountRepository accountRepository;
 
     private static SecureRandom secureRandom = new SecureRandom();
 

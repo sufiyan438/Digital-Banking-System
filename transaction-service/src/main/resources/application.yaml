@@ -4,7 +4,7 @@ spring:
 
   datasource:
     url: jdbc:mysql://localhost:3306/transaction_db?createDatabaseIfNotExist=true
-    username: user
+    username: root
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -16,12 +16,14 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 
   kafka:
-    bootstrap-servers: localhost:29092
+#    bootstrap-servers: localhost:29092
+    bootstrap-servers: localhost:9092
     consumer:
       group-id: transaction-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       properties:
         spring:
           json:
@@ -35,7 +37,7 @@ spring:
                 type: java.util.HashMap
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 server:
   port: 8082

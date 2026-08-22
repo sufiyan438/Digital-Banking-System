@@ -27,8 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TransactionService {
 
-    private TransactionRepository transactionRepository;
-    private AccountServiceClient accountServiceClient;
+    private final TransactionRepository transactionRepository;
+    private final AccountServiceClient accountServiceClient;
 
     private static final String TRANSACTION_INITIATED_TOPIC = "transaction.initiated";
     private static final String TRANSACTION_COMPLETED_TOPIC = "transaction.completed";
@@ -95,7 +95,7 @@ public class TransactionService {
     }
 
     public List<TransactionResponse> getTransactionHistory(String accountNumber){
-        List<Transaction> list = transactionRepository.findAllBySenderAccountNumberOrderByCreatedByDesc(accountNumber);
+        List<Transaction> list = transactionRepository.findAllBySenderAccountNumberOrderByCreatedAtDesc(accountNumber);
         return list.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

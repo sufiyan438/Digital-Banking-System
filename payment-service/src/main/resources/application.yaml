@@ -3,8 +3,8 @@ spring:
     name: payment-service
 
   datasource:
-    url: jdbc:mysql://host.docker.internal:3306/payment_db?createDatabaseIfNotExist=true
-    username: user
+    url: jdbc:mysql://localhost:3306/payment_db?createDatabaseIfNotExist=true
+    username: root
     driver-class-name: com.mysql.cj.jdbc.Driver
     jpa:
       hibernate:
@@ -13,11 +13,13 @@ spring:
       properties:
         hibernate:
           dialect: org.hibernate.dialect.MySQLDialect
-    kafka:
-      bootstrap-servers: localhost:29092
-      producer:
-        key-serializer: org.apache.kafka.common.serialization.StringSerializer
-        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+  kafka:
+    bootstrap-servers: localhost:9092
+#    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
 
 razorpay:
   key-id:
