@@ -38,6 +38,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final AccountServiceClient accountServiceClient;
+    private final AccountClientService accountClientService;
 
     private final ObjectMapper objectMapper;
 
@@ -58,7 +59,11 @@ public class TransactionService {
 //      accountServiceClient.deductBalance(request.getSenderAccountNumber(), request.getAmount());
 
         try {
-            accountServiceClient.deductBalance(
+//            accountServiceClient.deductBalance(
+//                    request.getSenderAccountNumber(),
+//                    request.getAmount()
+//            );
+            accountClientService.deductBalance(
                     request.getSenderAccountNumber(),
                     request.getAmount()
             );
