@@ -1,5 +1,8 @@
 package com.banking.transactionservice.service;
 
+import com.banking.transactionservice.model.OutboxEvent;
+import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 import com.banking.transactionservice.client.AccountServiceClient;
 import com.banking.transactionservice.dto.TransactionResponse;
 import com.banking.transactionservice.dto.TransferRequest;
@@ -8,6 +11,7 @@ import com.banking.transactionservice.event.TransactionInitiatedEvent;
 import com.banking.transactionservice.model.Transaction;
 import com.banking.transactionservice.model.TransactionStatus;
 import com.banking.transactionservice.model.TransactionType;
+import com.banking.transactionservice.repository.OutboxEventRepository;
 import com.banking.transactionservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -30,7 +36,10 @@ import java.util.stream.Collectors;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final OutboxEventRepository outboxEventRepository;
     private final AccountServiceClient accountServiceClient;
+
+    private final ObjectMapper objectMapper;
 
     private static final String TRANSACTION_INITIATED_TOPIC = "transaction.initiated";
     private static final String TRANSACTION_COMPLETED_TOPIC = "transaction.completed";
@@ -40,6 +49,7 @@ public class TransactionService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final RedisTemplate<String, String> redisTemplate;
 
+    @Transactional
     public TransactionResponse transfer(TransferRequest request){
         log.info("SAGA pattern kicks in here. Transferring INR {} from {} to {}",
                 request.getAmount(),
@@ -96,8 +106,36 @@ public class TransactionService {
                 .description(savedTransaction.getDescription())
                 .build();
 
-        kafkaTemplate.send(TRANSACTION_INITIATED_TOPIC, savedTransaction.getId(), event);
-        log.info("SAGA STEP 2 - TransactionInitiatedEvent published: {}", savedTransaction.getId());
+//        kafkaTemplate.send(TRANSACTION_INITIATED_TOPIC, savedTransaction.getId(), event);
+        try {
+
+            String payload = objectMapper.writeValueAsString(event);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .id(UUID.randomUUID().toString())
+                    .aggregateId(transaction.getId())
+                    .eventType("TRANSACTION_INITIATED")
+                    .topic("transaction.initiated")
+                    .payload(payload)
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+
+            log.info(
+                    "TransactionInitiatedEvent stored in outbox: {}",
+                    transaction.getId()
+            );
+
+        } catch (Exception e) {
+
+            throw new RuntimeException(
+                    "Failed to create outbox event",
+                    e
+            );
+        }
+        log.info("SAGA STEP 2 - TransactionInitiatedEvent queued in outbox: {}", savedTransaction.getId());
         return mapToResponse(savedTransaction);
     }
 
@@ -131,6 +169,7 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public TransactionResponse verifyOtp(String transactionId, String otp){
         log.info("OTP verification for the transaction: {}", transactionId);
         Transaction transaction = transactionRepository.findById(transactionId)
@@ -191,7 +230,7 @@ public class TransactionService {
     private void completeTransaction(Transaction transaction){
 //        transaction.setStatus(TransactionStatus.COMPLETED);
         transaction.setStatus(TransactionStatus.CREDIT_PENDING);
-        transaction.setCompletedAt(LocalDateTime.now());
+//        transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
         TransactionCompletedEvent completedEvent = TransactionCompletedEvent.builder()
@@ -202,11 +241,33 @@ public class TransactionService {
                 .description(transaction.getDescription())
                 .build();
 
-        kafkaTemplate.send(TRANSACTION_COMPLETED_TOPIC, transaction.getId(), completedEvent);
+//        kafkaTemplate.send(TRANSACTION_COMPLETED_TOPIC, transaction.getId(), completedEvent);
 //        log.info("SAGA Complete. Transaction {} completed!", transaction.getId());
+        try {
+            String payload = objectMapper.writeValueAsString(completedEvent);
+
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .id(UUID.randomUUID().toString())
+                    .aggregateId(transaction.getId())
+                    .eventType("TRANSACTION_COMPLETED")
+                    .topic(TRANSACTION_COMPLETED_TOPIC)
+                    .payload(payload)
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
+
+        } catch (Exception e) {
+            throw new RuntimeException(
+                    "Failed to create transaction completed outbox event",
+                    e
+            );
+        }
         log.info("Transaction {} awaiting receiver credit", transaction.getId());
     }
 
+    @Transactional
     public void processCleanResult(String transactionId){
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new RuntimeException("Transaction " + transactionId +" not found"));

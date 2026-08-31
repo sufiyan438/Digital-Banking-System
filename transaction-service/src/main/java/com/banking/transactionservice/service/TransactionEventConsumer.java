@@ -1,4 +1,5 @@
 package com.banking.transactionservice.service;
+import com.banking.transactionservice.model.ProcessedEvent;
 
 import com.banking.transactionservice.client.AccountServiceClient;
 import com.banking.transactionservice.model.Transaction;
@@ -8,14 +9,17 @@ import com.banking.transactionservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.time.LocalDateTime;
 
 @Service
 @Slf4j
@@ -83,6 +87,7 @@ public class TransactionEventConsumer {
         }
     }
 
+    @Transactional
     @KafkaListener(
             topics = "transaction.credit.failed",
             groupId = "transaction-service-group"
@@ -90,11 +95,24 @@ public class TransactionEventConsumer {
     public void consumeCreditFailed(
             @Payload Map<String, Object> payload) {
 
-        String transactionId =
-                payload.get("transactionId").toString();
+        String transactionId = payload.get("transactionId").toString();
+        String reason = payload.get("reason").toString();
+        String eventId = "credit-failed-" + transactionId;
 
-        String reason =
-                payload.get("reason").toString();
+        int inserted = processedEventRepository.insertIfAbsent(
+                eventId,
+                "TRANSACTION_CREDIT_FAILED"
+        );
+
+        if (inserted == 0) {
+
+            log.warn(
+                    "Duplicate credit failure event ignored for transaction {}",
+                    transactionId
+            );
+
+            return;
+        }
 
         log.error(
                 "Credit failure received for transaction {}. Reason: {}",
@@ -109,7 +127,6 @@ public class TransactionEventConsumer {
         );
 
         if (updated == 1) {
-
             log.warn(
                     "Transaction {} moved to COMPENSATING",
                     transactionId
@@ -169,15 +186,29 @@ public class TransactionEventConsumer {
         }
     }
 
+    @Transactional
     @KafkaListener(
             topics = "transaction.credit.succeeded",
             groupId = "transaction-service-group"
     )
-    public void consumeCreditSucceeded(
-            @Payload Map<String, Object> payload) {
+    public void consumeCreditSucceeded(@Payload Map<String, Object> payload) {
+        String transactionId = payload.get("transactionId").toString();
+        String eventId = "credit-succeeded-" + transactionId;
 
-        String transactionId =
-                payload.get("transactionId").toString();
+        int inserted = processedEventRepository.insertIfAbsent(
+                eventId,
+                "TRANSACTION_CREDIT_SUCCEEDED"
+        );
+
+        if (inserted == 0) {
+
+            log.warn(
+                    "Duplicate credit success event ignored for transaction {}",
+                    transactionId
+            );
+
+            return;
+        }
 
         int updated = transactionRepository.updateStatusIfCurrent(
                 transactionId,
