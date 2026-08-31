@@ -12,7 +12,9 @@ import com.banking.transactionservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -43,7 +45,35 @@ public class TransactionService {
                 request.getAmount(),
                 request.getSenderAccountNumber(),
                 request.getRecieverAccountNumber());
-        accountServiceClient.deductBalance(request.getSenderAccountNumber(), request.getAmount());
+//      accountServiceClient.deductBalance(request.getSenderAccountNumber(), request.getAmount());
+
+        try {
+            accountServiceClient.deductBalance(
+                    request.getSenderAccountNumber(),
+                    request.getAmount()
+            );
+
+            log.info(
+                    "Sender debit successful. Account: {}, Amount: {}",
+                    request.getSenderAccountNumber(),
+                    request.getAmount()
+            );
+
+        } catch (Exception e) {
+
+            log.error(
+                    "Sender debit failed. Account: {}, Amount: {}. Reason: {}",
+                    request.getSenderAccountNumber(),
+                    request.getAmount(),
+                    e.getMessage()
+            );
+
+            throw new RuntimeException(
+                    "Unable to debit sender account",
+                    e
+            );
+        }
+
 
         Transaction transaction = Transaction.builder()
                 .senderAccountNumber(request.getSenderAccountNumber())
@@ -159,7 +189,8 @@ public class TransactionService {
     }
 
     private void completeTransaction(Transaction transaction){
-        transaction.setStatus(TransactionStatus.COMPLETED);
+//        transaction.setStatus(TransactionStatus.COMPLETED);
+        transaction.setStatus(TransactionStatus.CREDIT_PENDING);
         transaction.setCompletedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
@@ -172,7 +203,8 @@ public class TransactionService {
                 .build();
 
         kafkaTemplate.send(TRANSACTION_COMPLETED_TOPIC, transaction.getId(), completedEvent);
-        log.info("SAGA Complete. Transaction {} completed!", transaction.getId());
+//        log.info("SAGA Complete. Transaction {} completed!", transaction.getId());
+        log.info("Transaction {} awaiting receiver credit", transaction.getId());
     }
 
     public void processCleanResult(String transactionId){

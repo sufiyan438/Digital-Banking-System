@@ -5,6 +5,9 @@ public enum TransactionStatus {
     PROCESSING,
     COMPLETED,
     PENDING_VERIFICATION,
+    CREDIT_PENDING,
+    REFUNDED,
+    COMPENSATING,
     FAILED,
     FLAGGED
 }

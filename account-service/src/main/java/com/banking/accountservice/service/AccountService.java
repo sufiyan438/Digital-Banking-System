@@ -10,11 +10,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -23,6 +25,7 @@ import java.util.Map;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static SecureRandom secureRandom = new SecureRandom();
 
@@ -120,13 +123,53 @@ public class AccountService {
 
     @KafkaListener(topics = "transaction.completed")
     public void consumeTransactionCompleted(@Payload Map<String, Object> payload){
+//        try {
+//            String receiverAccount = (String) payload.get("receiverAccountNumber");
+//            BigDecimal amount = new BigDecimal(payload.get("amount").toString());
+//            log.info("Crediting account: {} amount: {}", receiverAccount, amount);
+//            creditBalance(receiverAccount, amount);
+//        } catch (Exception e) {
+//            log.error("Error crediting account. Error: {}", e.getMessage());
+//        }
+        String transactionId = payload.get("transactionId").toString();
+        String receiverAccount = payload.get("receiverAccountNumber").toString();
+        BigDecimal amount = new BigDecimal(payload.get("amount").toString());
         try {
-            String receiverAccount = (String) payload.get("receiverAccountNumber");
-            BigDecimal amount = new BigDecimal(payload.get("amount").toString());
-            log.info("Crediting account: {} amount: {}", receiverAccount, amount);
+
+            log.info(
+                    "Crediting account: {} amount: {}",
+                    receiverAccount,
+                    amount
+            );
+
             creditBalance(receiverAccount, amount);
+            Map<String, Object> successEvent = new HashMap<>();
+
+            successEvent.put("transactionId", transactionId);
+
+            kafkaTemplate.send(
+                    "transaction.credit.succeeded",
+                    transactionId,
+                    successEvent
+            );
+
         } catch (Exception e) {
-            log.error("Error crediting account. Error: {}", e.getMessage());
+            log.error(
+                    "Credit failed for transaction {}. Error: {}",
+                    transactionId,e.getMessage());
+
+            Map<String, Object> failureEvent = new HashMap<>();
+
+            failureEvent.put("transactionId", transactionId);
+            failureEvent.put("receiverAccountNumber", receiverAccount);
+            failureEvent.put("amount", amount);
+            failureEvent.put("reason", e.getMessage());
+
+            kafkaTemplate.send(
+                    "transaction.credit.failed",
+                    transactionId,
+                    failureEvent
+            );
         }
     }
 
