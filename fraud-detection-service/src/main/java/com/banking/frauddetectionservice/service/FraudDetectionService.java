@@ -36,7 +36,7 @@ public class FraudDetectionService {
     private static final String FRAUD_CHECK_CLEAN_RESULT_TOPIC = "fraud.check.clean";
     private static final String VERIFICATION_REQUIRED_TOPIC = "verification.required";
 
-    public void checkTransaction(Map<String, Object> payload){
+    public void checkTransaction(Map<String, Object> payload) throws Exception{
         String transactionId = payload.get("transactionId").toString();
 
         if (isAlreadyProcessed(transactionId)) {
@@ -66,7 +66,9 @@ public class FraudDetectionService {
             verificationEvent.put("amount", amount);
             verificationEvent.put("reason", result.getReason());
 
-            kafkaTemplate.send(VERIFICATION_REQUIRED_TOPIC, transactionId, verificationEvent);
+//            kafkaTemplate.send(VERIFICATION_REQUIRED_TOPIC, transactionId, verificationEvent);
+            kafkaTemplate.send(VERIFICATION_REQUIRED_TOPIC, transactionId, verificationEvent).get();
+            markAsProcessed(transactionId);
         }
         else{
             log.info("Transaction is clean!");
@@ -75,7 +77,8 @@ public class FraudDetectionService {
             transactionCleanEvent.put("isFraud", false);
             transactionCleanEvent.put("reason", null);
 
-            kafkaTemplate.send(FRAUD_CHECK_CLEAN_RESULT_TOPIC, transactionId, transactionCleanEvent);
+            kafkaTemplate.send(FRAUD_CHECK_CLEAN_RESULT_TOPIC, transactionId, transactionCleanEvent).get();
+            markAsProcessed(transactionId);
         }
     }
 
@@ -133,15 +136,28 @@ public class FraudDetectionService {
 
     private boolean isAlreadyProcessed(String transactionId) {
         String key = "fraud:processed:" + transactionId;
+        return Boolean.TRUE.equals(
+                redisTemplate.hasKey(key)
+        );
+//        Boolean firstTime = redisTemplate.opsForValue()
+//                .setIfAbsent(
+//                        key,
+//                        "processed",
+//                        1,
+//                        TimeUnit.DAYS
+//                );
+//
+//        return Boolean.FALSE.equals(firstTime);
+    }
 
-        Boolean firstTime = redisTemplate.opsForValue()
-                .setIfAbsent(
-                        key,
-                        "processed",
-                        1,
-                        TimeUnit.DAYS
-                );
+    private void markAsProcessed(String transactionId) {
+        String key = "fraud:processed:" + transactionId;
 
-        return Boolean.FALSE.equals(firstTime);
+        redisTemplate.opsForValue().set(
+                key,
+                "processed",
+                1,
+                TimeUnit.DAYS
+        );
     }
 }

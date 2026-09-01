@@ -1,5 +1,7 @@
 package com.banking.transactionservice.service;
 
+import com.banking.transactionservice.exception.OutboxCreationException;
+import com.banking.transactionservice.exception.TransactionNotFoundException;
 import com.banking.transactionservice.model.OutboxEvent;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -53,41 +55,13 @@ public class TransactionService {
     @Transactional
     public TransactionResponse transfer(TransferRequest request){
         log.info("SAGA pattern kicks in here. Transferring INR {} from {} to {}",
-                request.getAmount(),
-                request.getSenderAccountNumber(),
-                request.getRecieverAccountNumber());
-//      accountServiceClient.deductBalance(request.getSenderAccountNumber(), request.getAmount());
+                request.getAmount(), request.getSenderAccountNumber(), request.getRecieverAccountNumber());
 
-        try {
-//            accountServiceClient.deductBalance(
-//                    request.getSenderAccountNumber(),
-//                    request.getAmount()
-//            );
-            accountClientService.deductBalance(
-                    request.getSenderAccountNumber(),
-                    request.getAmount()
-            );
-
-            log.info(
-                    "Sender debit successful. Account: {}, Amount: {}",
-                    request.getSenderAccountNumber(),
-                    request.getAmount()
-            );
-
-        } catch (Exception e) {
-
-            log.error(
-                    "Sender debit failed. Account: {}, Amount: {}. Reason: {}",
-                    request.getSenderAccountNumber(),
-                    request.getAmount(),
-                    e.getMessage()
-            );
-
-            throw new RuntimeException(
-                    "Unable to debit sender account",
-                    e
-            );
-        }
+        accountClientService.deductBalance(request.getSenderAccountNumber(), request.getAmount());
+        log.info(
+                "Sender debit successful. Account: {}, Amount: {}",
+                request.getSenderAccountNumber(), request.getAmount()
+        );
 
 
         Transaction transaction = Transaction.builder()
@@ -135,7 +109,7 @@ public class TransactionService {
 
         } catch (Exception e) {
 
-            throw new RuntimeException(
+            throw new OutboxCreationException(
                     "Failed to create outbox event",
                     e
             );
@@ -163,7 +137,8 @@ public class TransactionService {
 
     public TransactionResponse getTransaction(String transactionId){
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction " + transactionId +" not found"));
+                .orElseThrow(() ->
+                        new TransactionNotFoundException("Transaction " + transactionId +" not found"));
         return mapToResponse(transaction);
     }
 
@@ -178,19 +153,52 @@ public class TransactionService {
     public TransactionResponse verifyOtp(String transactionId, String otp){
         log.info("OTP verification for the transaction: {}", transactionId);
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction " + transactionId +" not found"));
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction " + transactionId +" not found"));
         String otpKey = "verification:otp" + transactionId;
         String storedOtp = redisTemplate.opsForValue().get(otpKey);
 
         if(storedOtp == null){
             //OTP expired
             log.warn("OTP has expired for transaction {}", transactionId);
+
+            int updated = transactionRepository.updateStatusIfCurrent(
+                    transactionId,
+                    TransactionStatus.PENDING_VERIFICATION,
+                    TransactionStatus.COMPENSATING
+            );
+
+            if (updated == 0) {
+                log.warn(
+                        "Transaction {} is no longer PENDING_VERIFICATION. Skipping compensation.",
+                        transactionId
+                );
+                return mapToResponse(transaction);
+            }
+
             compensateTransaction(transaction, "OTP expired. Transaction cancelled and amount refunded");
             return mapToResponse(transaction);
         }
+
+
         if(!storedOtp.equals(otp)){
             //Block account and refund
             log.warn("Wrong OTP. Blocking account and refunding money for transaction: {}", transactionId);
+
+            int updated = transactionRepository.updateStatusIfCurrent(
+                    transactionId,
+                    TransactionStatus.PENDING_VERIFICATION,
+                    TransactionStatus.COMPENSATING
+            );
+
+            if (updated == 0) {
+                log.warn(
+                        "Transaction {} is no longer PENDING_VERIFICATION. Skipping compensation.",
+                        transactionId
+                );
+
+                return mapToResponse(transaction);
+            }
+
             redisTemplate.delete(otpKey);
             blockAccountAndCompensate(transaction, "Wrong OTP entered. Transaction cancelled and account blocked. Contact bank for further resolution.");
             return mapToResponse(transaction);
@@ -207,11 +215,22 @@ public class TransactionService {
 
         //Credit money back then publish event to Kafka which will notify user
 //        accountServiceClient.creditBalance(transaction.getSenderAccountNumber(), transaction.getAmount());
-        accountClientService.creditBalance(
+
+
+//        accountClientService.creditBalance(
+//                transaction.getSenderAccountNumber(),
+//                transaction.getAmount()
+//        );
+
+        accountClientService.refundBalance(
+                transaction.getId(),
                 transaction.getSenderAccountNumber(),
                 transaction.getAmount()
         );
-        transaction.setStatus(TransactionStatus.FLAGGED);
+
+
+//        transaction.setStatus(TransactionStatus.FLAGGED);
+        transaction.setStatus(TransactionStatus.REFUNDED);
         transaction.setFailureReason(reason + "SAGA compensation executed. Amount refunded at " + LocalDateTime.now());
         transactionRepository.save(transaction);
 
@@ -268,7 +287,7 @@ public class TransactionService {
             outboxEventRepository.save(outboxEvent);
 
         } catch (Exception e) {
-            throw new RuntimeException(
+            throw new OutboxCreationException(
                     "Failed to create transaction completed outbox event",
                     e
             );
@@ -279,7 +298,7 @@ public class TransactionService {
     @Transactional
     public void processCleanResult(String transactionId){
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction " + transactionId +" not found"));
+                .orElseThrow(() -> new TransactionNotFoundException("Transaction " + transactionId +" not found"));
         if(transaction.getStatus() != TransactionStatus.PROCESSING){
             log.warn("Transaction {} not PROCESSING - skipping", transactionId);
             return;

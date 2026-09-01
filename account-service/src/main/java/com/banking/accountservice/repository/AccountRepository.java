@@ -37,6 +37,7 @@ public interface AccountRepository extends JpaRepository<Account, String> {
     UPDATE Account a
     SET a.balance = a.balance + :amount
     WHERE a.accountNumber = :accountNumber
+    AND a.accountStatus = com.banking.accountservice.model.AccountStatus.ACTIVE
 """)
     int creditBalanceAtomic(
             @Param("accountNumber") String accountNumber,

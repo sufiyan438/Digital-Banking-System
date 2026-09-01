@@ -21,7 +21,8 @@ public class TransactionEventConsumer {
         try{
             fraudDetectionService.checkTransaction(payload);
         } catch (Exception e) {
-            log.error("Error in fraud detection: {}", e.getMessage());
+            log.error("Error in fraud detection: {}", e.getMessage(), e);
+            throw new RuntimeException(e);
         }
     }
 }

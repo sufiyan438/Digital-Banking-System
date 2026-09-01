@@ -29,9 +29,10 @@ public class NotificationService {
                                     "Your OTP is: %s. Valid for 5 minutes. " +
                                     "If this wasn't you — ignore this message. " +
                                     "Transaction will be cancelled and amount refunded automatically.",
-                            reason, amount, otp, transactionId, otp));
+                            reason, amount, otp));
         }catch (Exception e){
-            log.error("Error sending OTP notification: {}", e.getMessage());
+            log.error("Error sending OTP notification: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -56,7 +57,8 @@ public class NotificationService {
                     String.format("%s credited to account %s", amount, receiverAccount));
         }
         catch (Exception e){
-            log.error("Error sending transaction notification: {}", e.getMessage());
+            log.error("Error sending transaction notification: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -64,12 +66,13 @@ public class NotificationService {
     public void consumeFraudDetected(@Payload Map<String, Object> payload){
         try{
             String accountNumber = (String) payload.get("accountNumber");
-            String reason = (String) payload.get("amount");
+            String reason = payload.get("amount").toString();
             sendAlert(accountNumber, "ACCOUNT BLOCKED",
                     String.format("Your account %s has been blocked.\nReason: %s\nContact your bank.", accountNumber, reason));
         }
         catch(Exception e){
-            log.error("Error sending fraud alert: {}", e.getMessage());
+            log.error("Error sending fraud alert: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -77,13 +80,14 @@ public class NotificationService {
     public void consumeTransactionRefunded(@Payload Map<String, Object> payload){
         try{
             String senderAccount = (String) payload.get("senderAccountNumber");
-            String amount = (String) payload.get("amount");
+            String amount = payload.get("amount").toString();
             String reason = (String) payload.get("reason");
             sendAlert(senderAccount, "REFUND PROCESSED",
                     String.format("Your transaction was cancelled. Reason: %s\n%s has been refunded to account %s",
                             reason, amount, senderAccount));
         }catch(Exception e){
-            log.error("Error sending refund notification: {}", e.getMessage());
+            log.error("Error sending refund notification: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -95,7 +99,8 @@ public class NotificationService {
             sendAlert(accountNumber, "PAYMENT COMPLETED",
                     String.format("Payment of %s completed.\nRazorpay ID: %s", amount, payload.get("razorpayPaymentId")));
         }catch (Exception e){
-            log.error("Error sending payment notification: {}", e.getMessage());
+            log.error("Error sending payment notification: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -107,7 +112,8 @@ public class NotificationService {
             sendAlert(accountNumber, "PAYMENT FAILED",
                     String.format("Your payment of %s could not be processed. Contact support.", amount));
         }catch(Exception e){
-            log.error("Error sending payment failure notification: {}", e.getMessage());
+            log.error("Error sending payment failure notification: {}", e.getMessage(), e);
+            throw e;
         }
     }
 }

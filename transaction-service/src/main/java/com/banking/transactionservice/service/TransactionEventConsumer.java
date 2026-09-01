@@ -1,4 +1,5 @@
 package com.banking.transactionservice.service;
+import com.banking.transactionservice.exception.TransactionNotFoundException;
 import com.banking.transactionservice.model.ProcessedEvent;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -42,6 +43,7 @@ public class TransactionEventConsumer {
     private static final String TRANSACTION_OTP_GENERATED_TOPIC = "transaction.otp.generated";
     private static final long OTP_EXPIRY_MINUTES = 5;
 
+    @Transactional
     @KafkaListener(topics = "verification.required", groupId = "transaction-service-group")
     public void consumeVerificationRequired(@Payload Map<String, Object> payload){
         try {
@@ -67,7 +69,8 @@ public class TransactionEventConsumer {
             log.info("Verification required for transactionIf: {} and reason: {}", transactionId, reason);
 
             Transaction transaction = transactionRepository.findById(transactionId)
-                    .orElseThrow(() -> new RuntimeException("Transaction " + transactionId + " not found"));
+                    .orElseThrow(() ->
+                            new TransactionNotFoundException("Transaction " + transactionId + " not found"));
 
             if(transaction.getStatus() != TransactionStatus.PROCESSING){
                 log.warn("Transaction {} is not in PROCESSING status. Hence skipping", transactionId);
@@ -91,7 +94,8 @@ public class TransactionEventConsumer {
             kafkaTemplate.send(TRANSACTION_OTP_GENERATED_TOPIC, transactionId, otpEvent);
         }
         catch (Exception e){
-            log.error("Error handling verification required: {}", e.getMessage());
+            log.error("Error handling verification required: {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -119,7 +123,8 @@ public class TransactionEventConsumer {
             transactionService.processCleanResult(transactionId);
         }
         catch (Exception e){
-            log.error("Error processing fraud check result {}", e.getMessage());
+            log.error("Error processing fraud check result {}", e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -174,7 +179,7 @@ public class TransactionEventConsumer {
             Transaction transaction = transactionRepository
                     .findById(transactionId)
                     .orElseThrow(() ->
-                            new RuntimeException(
+                            new TransactionNotFoundException(
                                     "Transaction not found: " + transactionId
                             )
                     );
@@ -185,7 +190,15 @@ public class TransactionEventConsumer {
 //                        transaction.getSenderAccountNumber(),
 //                        transaction.getAmount()
 //                );
-                accountClientService.creditBalance(
+
+
+//                accountClientService.creditBalance(
+//                        transaction.getSenderAccountNumber(),
+//                        transaction.getAmount()
+//                );
+
+                accountClientService.refundBalance(
+                        transaction.getId(),
                         transaction.getSenderAccountNumber(),
                         transaction.getAmount()
                 );

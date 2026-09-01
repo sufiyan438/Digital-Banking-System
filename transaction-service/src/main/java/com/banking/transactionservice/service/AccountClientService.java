@@ -1,6 +1,7 @@
 package com.banking.transactionservice.service;
 
 import com.banking.transactionservice.client.AccountServiceClient;
+import com.banking.transactionservice.exception.AccountServiceUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class AccountClientService {
     }
 
     private void deductBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
-        throw new RuntimeException("Account service unavailable while debiting account", throwable);
+        throw new AccountServiceUnavailableException("Account service unavailable while debiting account", throwable);
     }
 
     @Retry(name = "accountBalanceRetry", fallbackMethod = "getBalanceFallback")
@@ -31,7 +32,7 @@ public class AccountClientService {
     }
 
     private BigDecimal getBalanceFallback(String accountNumber, Throwable throwable) {
-        throw new RuntimeException("Unable to fetch account balance after retries",
+        throw new AccountServiceUnavailableException("Unable to fetch account balance after retries",
                 throwable
         );
     }
@@ -49,9 +50,23 @@ public class AccountClientService {
             BigDecimal amount,
             Throwable throwable
     ) {
-        throw new RuntimeException(
+        throw new AccountServiceUnavailableException(
                 "Account service unavailable while crediting account",
                 throwable
         );
+    }
+
+
+    @CircuitBreaker(name = "accountService", fallbackMethod = "refundBalanceFallback")
+    public void refundBalance(String transactionId, String accountNumber, BigDecimal amount) {
+        accountServiceClient.refundBalance(accountNumber, transactionId, amount);
+    }
+
+    private void refundBalanceFallback(
+            String transactionId,
+            String accountNumber,
+            BigDecimal amount,
+            Throwable throwable) {
+        throw new AccountServiceUnavailableException("Account service unavailable while refunding account", throwable);
     }
 }

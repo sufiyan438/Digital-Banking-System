@@ -60,7 +60,7 @@ public class OutboxPublisher {
                 log.error(
                         "Failed to publish outbox event {}. Error: {}",
                         event.getId(),
-                        e.getMessage()
+                        e.getMessage(), e
                 );
             }
         }

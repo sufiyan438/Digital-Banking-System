@@ -53,4 +53,21 @@ public class AccountController {
         accountService.creditBalance(accountNumber, amount);
         return ResponseEntity.ok("Amount credited successfully");
     }
+
+
+
+    @PostMapping("/{accountNumber}/refund")
+    public ResponseEntity<Void> refundBalance(
+            @PathVariable String accountNumber,
+            @RequestParam String transactionId,
+            @RequestParam BigDecimal amount) {
+
+        accountService.refundBalance(
+                transactionId,
+                accountNumber,
+                amount
+        );
+
+        return ResponseEntity.ok().build();
+    }
 }

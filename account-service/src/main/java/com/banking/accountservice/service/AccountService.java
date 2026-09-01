@@ -2,14 +2,15 @@ package com.banking.accountservice.service;
 
 import com.banking.accountservice.dto.AccountResponse;
 import com.banking.accountservice.dto.CreateAccountRequest;
+import com.banking.accountservice.exception.AccountAlreadyExistsException;
+import com.banking.accountservice.exception.AccountBlockedException;
 import com.banking.accountservice.exception.AccountNotFoundException;
-import com.banking.accountservice.model.Account;
-import com.banking.accountservice.model.AccountStatus;
-import com.banking.accountservice.model.AccountType;
-import com.banking.accountservice.model.OutboxEvent;
+import com.banking.accountservice.exception.InsufficientBalanceException;
+import com.banking.accountservice.model.*;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.repository.ProcessedEventRepository;
 import com.banking.accountservice.repository.OutboxEventRepository;
+import com.banking.accountservice.repository.ProcessedRefundRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -38,12 +39,14 @@ public class AccountService {
 //    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
+    private final ProcessedRefundRepository processedRefundRepository;
+
     private static SecureRandom secureRandom = new SecureRandom();
 
     public AccountResponse createAccount(CreateAccountRequest request){
         log.info("Creating account for {}", request.getEmail());
         if(accountRepository.existsByEmail(request.getEmail())){
-            throw new RuntimeException("Account already exists for this mail: " + request.getEmail());
+            throw new AccountAlreadyExistsException("Account already exists for this mail: " + request.getEmail());
         }
         Account account = Account.builder()
                 .accountNumber(generateAccountNumber())
@@ -86,7 +89,7 @@ public class AccountService {
 
     private Account findByAccountNumber(String accountNumber){
         return accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new RuntimeException("Account not found: " + accountNumber));
+                .orElseThrow(() -> new AccountNotFoundException("Account not found: " + accountNumber));
     }
 
     public BigDecimal getBalance(String accountNumber){
@@ -121,7 +124,7 @@ public class AccountService {
         Account account = findByAccountNumber(accountNumber);
 
         if (account.getAccountStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException(
+            throw new AccountBlockedException(
                     "Account " + account.getAccountNumber() + " is blocked"
             );
         }
@@ -132,7 +135,7 @@ public class AccountService {
         );
 
         if (updated == 0) {
-            throw new RuntimeException("Insufficient balance");
+            throw new InsufficientBalanceException("Insufficient balance");
         }
 
         log.info(
@@ -272,12 +275,39 @@ public class AccountService {
 
     @KafkaListener(topics = "fraud.detected")
     public void consumeFraudDetected(@Payload Map<String, Object> payload){
-        try {
-            String accountNumber = payload.get("accountNumber").toString();
-            log.info("Fraud detected. Blocking account numebr: {}", accountNumber);
-            blockAccount(accountNumber);
-        } catch (Exception e) {
-            log.info("Error blocking account. Error: {}", e.getMessage());
+        String accountNumber = payload.get("accountNumber").toString();
+        log.info("Fraud detected. Blocking account numebr: {}", accountNumber);
+        blockAccount(accountNumber);
+    }
+
+    @Transactional
+    public void refundBalance(
+            String transactionId,
+            String accountNumber,
+            BigDecimal amount) {
+
+        if (processedRefundRepository.existsById(transactionId)) {
+            log.warn(
+                    "Refund already processed for transaction {}. Skipping.",
+                    transactionId
+            );
+            return;
         }
+
+        creditBalance(accountNumber, amount);
+
+        ProcessedRefund processedRefund = ProcessedRefund.builder()
+                .transactionId(transactionId)
+                .processedAt(LocalDateTime.now())
+                .build();
+
+        processedRefundRepository.save(processedRefund);
+
+        log.info(
+                "Refund processed for transaction {}. Account: {}, Amount: {}",
+                transactionId,
+                accountNumber,
+                amount
+        );
     }
 }
