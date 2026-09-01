@@ -38,6 +38,15 @@ public class FraudDetectionService {
 
     public void checkTransaction(Map<String, Object> payload){
         String transactionId = payload.get("transactionId").toString();
+
+        if (isAlreadyProcessed(transactionId)) {
+            log.warn(
+                    "Duplicate transaction.initiated event ignored for transaction {}",
+                    transactionId
+            );
+            return;
+        }
+
         String accountNumber = payload.get("senderAccountNumber").toString();
         BigDecimal amount = new BigDecimal(payload.get("amount").toString());
 
@@ -120,5 +129,19 @@ public class FraudDetectionService {
         log.info("Balance check - amount: {}, maxAllowed: {}, suspicious: {}",
                 amount, maxAllowed, amount.compareTo(maxAllowed) > 0);
         return amount.compareTo(maxAllowed) > 0;
+    }
+
+    private boolean isAlreadyProcessed(String transactionId) {
+        String key = "fraud:processed:" + transactionId;
+
+        Boolean firstTime = redisTemplate.opsForValue()
+                .setIfAbsent(
+                        key,
+                        "processed",
+                        1,
+                        TimeUnit.DAYS
+                );
+
+        return Boolean.FALSE.equals(firstTime);
     }
 }
