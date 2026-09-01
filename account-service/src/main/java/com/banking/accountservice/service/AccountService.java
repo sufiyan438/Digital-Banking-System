@@ -2,24 +2,30 @@ package com.banking.accountservice.service;
 
 import com.banking.accountservice.dto.AccountResponse;
 import com.banking.accountservice.dto.CreateAccountRequest;
+import com.banking.accountservice.exception.AccountNotFoundException;
 import com.banking.accountservice.model.Account;
 import com.banking.accountservice.model.AccountStatus;
 import com.banking.accountservice.model.AccountType;
+import com.banking.accountservice.model.OutboxEvent;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.repository.ProcessedEventRepository;
+import com.banking.accountservice.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import tools.jackson.databind.ObjectMapper;
+
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -28,7 +34,9 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final ProcessedEventRepository processedEventRepository;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final OutboxEventRepository outboxEventRepository;
+//    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
     private static SecureRandom secureRandom = new SecureRandom();
 
@@ -150,7 +158,7 @@ public class AccountService {
         );
 
         if (updated == 0) {
-            throw new RuntimeException(
+            throw new AccountNotFoundException(
                     "Account not found: " + accountNumber
             );
         }
@@ -213,13 +221,25 @@ public class AccountService {
 
             successEvent.put("transactionId", transactionId);
 
-            kafkaTemplate.send(
-                    "transaction.credit.succeeded",
-                    transactionId,
-                    successEvent
-            );
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .id(UUID.randomUUID())
+                    .aggregateId(transactionId)
+                    .eventType("TRANSACTION_CREDIT_SUCCEEDED")
+                    .topic("transaction.credit.succeeded")
+                    .payload(objectMapper.writeValueAsString(successEvent))
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
 
-        } catch (Exception e) {
+            outboxEventRepository.save(outboxEvent);
+
+//            kafkaTemplate.send(
+//                    "transaction.credit.succeeded",
+//                    transactionId,
+//                    successEvent
+//            );
+
+        } catch (AccountNotFoundException e) {
             log.error(
                     "Credit failed for transaction {}. Error: {}",
                     transactionId,e.getMessage());
@@ -231,11 +251,22 @@ public class AccountService {
             failureEvent.put("amount", amount);
             failureEvent.put("reason", e.getMessage());
 
-            kafkaTemplate.send(
-                    "transaction.credit.failed",
-                    transactionId,
-                    failureEvent
-            );
+//            kafkaTemplate.send(
+//                    "transaction.credit.failed",
+//                    transactionId,
+//                    failureEvent
+//            );
+            OutboxEvent outboxEvent = OutboxEvent.builder()
+                    .id(UUID.randomUUID())
+                    .aggregateId(transactionId)
+                    .eventType("TRANSACTION_CREDIT_FAILED")
+                    .topic("transaction.credit.failed")
+                    .payload(objectMapper.writeValueAsString(failureEvent))
+                    .status("PENDING")
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            outboxEventRepository.save(outboxEvent);
         }
     }
 

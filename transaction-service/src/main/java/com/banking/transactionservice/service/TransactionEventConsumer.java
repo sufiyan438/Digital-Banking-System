@@ -95,6 +95,7 @@ public class TransactionEventConsumer {
         }
     }
 
+    @Transactional
     @KafkaListener(topics = "fraud.check.clean", groupId = "transaction-service-group")
     public void consumeFraudCheckCleanResult(@Payload Map<String, Object> payload){
         try{
