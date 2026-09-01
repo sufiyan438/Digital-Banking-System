@@ -20,10 +20,15 @@ spring:
       group-id: account-service-group
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+#      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 #      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring:
+          deserializer:
+            value:
+              delegate:
+                class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
           json:
             trusted:
               packages: "*"
