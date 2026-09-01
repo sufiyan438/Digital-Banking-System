@@ -72,3 +72,8 @@ resilience4j:
       accountBalanceRetry:
         maxAttempts: 3
         waitDuration: 500ms
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
