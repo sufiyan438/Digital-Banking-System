@@ -206,7 +206,11 @@ public class TransactionService {
         log.warn("SAGA compensation - refunding to: {} amount: {}", transaction.getSenderAccountNumber(), transaction.getAmount());
 
         //Credit money back then publish event to Kafka which will notify user
-        accountServiceClient.creditBalance(transaction.getSenderAccountNumber(), transaction.getAmount());
+//        accountServiceClient.creditBalance(transaction.getSenderAccountNumber(), transaction.getAmount());
+        accountClientService.creditBalance(
+                transaction.getSenderAccountNumber(),
+                transaction.getAmount()
+        );
         transaction.setStatus(TransactionStatus.FLAGGED);
         transaction.setFailureReason(reason + "SAGA compensation executed. Amount refunded at " + LocalDateTime.now());
         transactionRepository.save(transaction);

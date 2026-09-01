@@ -6,6 +6,7 @@ import com.banking.accountservice.model.Account;
 import com.banking.accountservice.model.AccountStatus;
 import com.banking.accountservice.model.AccountType;
 import com.banking.accountservice.repository.AccountRepository;
+import com.banking.accountservice.repository.ProcessedEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
@@ -25,6 +27,7 @@ import java.util.Map;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final ProcessedEventRepository processedEventRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private static SecureRandom secureRandom = new SecureRandom();
@@ -90,26 +93,72 @@ public class AccountService {
         log.info("Account bearing number {} has been blocked", accountNumber);
     }
 
-    public void deductBalance(String accountNumber, BigDecimal amount){
+//    public void deductBalance(String accountNumber, BigDecimal amount){
+//        log.info("Deducting {} from account: {}", amount, accountNumber);
+//        Account account = findByAccountNumber(accountNumber);
+//        if(account.getAccountStatus() != AccountStatus.ACTIVE){
+//            throw new RuntimeException("Account " + account.getAccountNumber() + " is blocked");
+//        }
+//        if(account.getBalance().compareTo(amount) < 0){
+//            throw new RuntimeException("Insufficient balance");
+//        }
+//        account.setBalance(account.getBalance().subtract(amount));
+//        accountRepository.save(account);
+//        log.info("Amount deducted. New balance: {}", account.getBalance());
+//    }
+
+    public void deductBalance(String accountNumber, BigDecimal amount) {
         log.info("Deducting {} from account: {}", amount, accountNumber);
+
         Account account = findByAccountNumber(accountNumber);
-        if(account.getAccountStatus() != AccountStatus.ACTIVE){
-            throw new RuntimeException("Account " + account.getAccountNumber() + " is blocked");
+
+        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new RuntimeException(
+                    "Account " + account.getAccountNumber() + " is blocked"
+            );
         }
-        if(account.getBalance().compareTo(amount) < 0){
+
+        int updated = accountRepository.deductBalanceAtomic(
+                accountNumber,
+                amount
+        );
+
+        if (updated == 0) {
             throw new RuntimeException("Insufficient balance");
         }
-        account.setBalance(account.getBalance().subtract(amount));
-        accountRepository.save(account);
-        log.info("Amount deducted. New balance: {}", account.getBalance());
+
+        log.info(
+                "Amount deducted successfully from account: {}",
+                accountNumber
+        );
     }
 
-    public void creditBalance(String accountNumber, BigDecimal amount){
-        log.info("Crediting {} to accout {}", amount, accountNumber);
-        Account account = findByAccountNumber(accountNumber);
-        account.setBalance(account.getBalance().add(amount));
-        accountRepository.save(account);
-        log.info("Amount credited. New balance: {}", account.getBalance());
+//    public void creditBalance(String accountNumber, BigDecimal amount){
+//        log.info("Crediting {} to accout {}", amount, accountNumber);
+//        Account account = findByAccountNumber(accountNumber);
+//        account.setBalance(account.getBalance().add(amount));
+//        accountRepository.save(account);
+//        log.info("Amount credited. New balance: {}", account.getBalance());
+//    }
+
+    public void creditBalance(String accountNumber, BigDecimal amount) {
+        log.info("Crediting {} to account {}", amount, accountNumber);
+
+        int updated = accountRepository.creditBalanceAtomic(
+                accountNumber,
+                amount
+        );
+
+        if (updated == 0) {
+            throw new RuntimeException(
+                    "Account not found: " + accountNumber
+            );
+        }
+
+        log.info(
+                "Amount credited successfully to account: {}",
+                accountNumber
+        );
     }
 
     private String generateAccountNumber(){
@@ -121,6 +170,7 @@ public class AccountService {
         return accountNumber;
     }
 
+    @Transactional
     @KafkaListener(topics = "transaction.completed")
     public void consumeTransactionCompleted(@Payload Map<String, Object> payload){
 //        try {
@@ -132,6 +182,22 @@ public class AccountService {
 //            log.error("Error crediting account. Error: {}", e.getMessage());
 //        }
         String transactionId = payload.get("transactionId").toString();
+
+        String eventId = "transaction-completed-" + transactionId;
+
+        int inserted = processedEventRepository.insertIfAbsent(
+                eventId,
+                "TRANSACTION_COMPLETED"
+        );
+
+        if (inserted == 0) {
+            log.warn(
+                    "Duplicate transaction.completed event ignored for transaction {}",
+                    transactionId
+            );
+            return;
+        }
+
         String receiverAccount = payload.get("receiverAccountNumber").toString();
         BigDecimal amount = new BigDecimal(payload.get("amount").toString());
         try {

@@ -1,6 +1,8 @@
 package com.banking.transactionservice.service;
 import com.banking.transactionservice.model.ProcessedEvent;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 import com.banking.transactionservice.client.AccountServiceClient;
 import com.banking.transactionservice.model.Transaction;
 import com.banking.transactionservice.model.TransactionStatus;
@@ -9,7 +11,6 @@ import com.banking.transactionservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.time.LocalDateTime;
 
 @Service
 @Slf4j
@@ -30,19 +30,38 @@ public class TransactionEventConsumer {
     private final ProcessedEventRepository processedEventRepository;
 
     private final AccountServiceClient accountServiceClient;
+    private final AccountClientService accountClientService;
 
     private final RedisTemplate<String, String> redisTemplate;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     private final TransactionService transactionService;
 
+    private final MeterRegistry meterRegistry;
+
     private static final String TRANSACTION_OTP_GENERATED_TOPIC = "transaction.otp.generated";
     private static final long OTP_EXPIRY_MINUTES = 5;
 
-    @KafkaListener(topics = "verification.required")
+    @KafkaListener(topics = "verification.required", groupId = "transaction-service-group")
     public void consumeVerificationRequired(@Payload Map<String, Object> payload){
         try {
             String transactionId = (String) payload.get("transactionId");
+
+            String eventId = "verification-required-" + transactionId;
+
+            int inserted = processedEventRepository.insertIfAbsent(
+                    eventId,
+                    "VERIFICATION_REQUIRED"
+            );
+
+            if (inserted == 0) {
+                log.warn(
+                        "Duplicate verification required event ignored for transaction {}",
+                        transactionId
+                );
+                return;
+            }
+
             String accountNumber = (String) payload.get("accountNumber");
             String reason = payload.get("reason").toString();
             log.info("Verification required for transactionIf: {} and reason: {}", transactionId, reason);
@@ -76,10 +95,26 @@ public class TransactionEventConsumer {
         }
     }
 
-    @KafkaListener(topics = "fraud.check.clean")
+    @KafkaListener(topics = "fraud.check.clean", groupId = "transaction-service-group")
     public void consumeFraudCheckCleanResult(@Payload Map<String, Object> payload){
         try{
             String transactionId = (String) payload.get("transactionId");
+            String eventId =
+                    "fraud-check-clean-" + transactionId;
+
+            int inserted =
+                    processedEventRepository.insertIfAbsent(
+                            eventId,
+                            "FRAUD_CHECK_CLEAN"
+                    );
+
+            if (inserted == 0) {
+                log.warn(
+                        "Duplicate fraud check clean event ignored for transaction {}",
+                        transactionId
+                );
+                return;
+            }
             transactionService.processCleanResult(transactionId);
         }
         catch (Exception e){
@@ -127,6 +162,9 @@ public class TransactionEventConsumer {
         );
 
         if (updated == 1) {
+            meterRegistry
+                    .counter("banking.compensation.triggered")
+                    .increment();
             log.warn(
                     "Transaction {} moved to COMPENSATING",
                     transactionId
@@ -142,7 +180,11 @@ public class TransactionEventConsumer {
 
             try {
 
-                accountServiceClient.creditBalance(
+//                accountServiceClient.creditBalance(
+//                        transaction.getSenderAccountNumber(),
+//                        transaction.getAmount()
+//                );
+                accountClientService.creditBalance(
                         transaction.getSenderAccountNumber(),
                         transaction.getAmount()
                 );
@@ -154,6 +196,9 @@ public class TransactionEventConsumer {
                 );
 
                 if (refundUpdated == 1) {
+                    meterRegistry
+                            .counter("banking.compensation.succeeded")
+                            .increment();
 
                     log.info(
                             "Compensation successful. Transaction {} moved to REFUNDED",
@@ -169,7 +214,9 @@ public class TransactionEventConsumer {
                 }
 
             } catch (Exception e) {
-
+                meterRegistry
+                        .counter("banking.compensation.failed")
+                        .increment();
                 log.error(
                         "COMPENSATION FAILED for transaction {}. Reason: {}",
                         transactionId,
@@ -178,7 +225,9 @@ public class TransactionEventConsumer {
             }
 
         } else {
-
+            meterRegistry
+                    .counter("banking.compensation.ignored")
+                    .increment();
             log.warn(
                     "Ignoring credit failure for transaction {} because it is no longer CREDIT_PENDING",
                     transactionId

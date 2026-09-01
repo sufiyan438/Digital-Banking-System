@@ -35,4 +35,23 @@ public class AccountClientService {
                 throwable
         );
     }
+
+    @CircuitBreaker(
+            name = "accountService",
+            fallbackMethod = "creditBalanceFallback"
+    )
+    public void creditBalance(String accountNumber, BigDecimal amount) {
+        accountServiceClient.creditBalance(accountNumber, amount);
+    }
+
+    private void creditBalanceFallback(
+            String accountNumber,
+            BigDecimal amount,
+            Throwable throwable
+    ) {
+        throw new RuntimeException(
+                "Account service unavailable while crediting account",
+                throwable
+        );
+    }
 }
