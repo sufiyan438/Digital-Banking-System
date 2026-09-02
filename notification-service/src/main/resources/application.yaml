@@ -3,6 +3,8 @@ spring:
     name: notification-service
 
   kafka:
+    listener:
+      observation-enabled: true
     bootstrap-servers: localhost:9092
 #    bootstrap-servers: localhost:29092
     producer:
@@ -38,6 +40,9 @@ server:
   port: 8085
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0
   endpoints:
     web:
       exposure:
