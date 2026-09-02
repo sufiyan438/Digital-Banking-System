@@ -22,6 +22,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -204,9 +205,42 @@ public class TransactionService {
             return mapToResponse(transaction);
         }
         //Correct OTP
-        log.info("OTP verified. Compeleting transaction {}", transaction);
+//        log.info("OTP verified. Compeleting transaction {}", transaction);
+//        redisTemplate.delete(otpKey);
+//        completeTransaction(transaction);
+//        return mapToResponse(transaction);
+
+
+        /*Doing this to ensure that race condition does not happen
+        i.e.user enters OTP at end time and scheduler sees it as expired. hence adding this concurrency guard
+        */
+
+        // Correct OTP
+        log.info("OTP verified. Completing transaction {}", transactionId);
+
+        int updated = transactionRepository.updateStatusIfCurrent(
+                transactionId,
+                TransactionStatus.PENDING_VERIFICATION,
+                TransactionStatus.CREDIT_PENDING
+        );
+
+        if (updated == 0) {
+            log.warn(
+                    "Transaction {} is no longer PENDING_VERIFICATION. Skipping completion.",
+                    transactionId
+            );
+
+            Transaction latest = transactionRepository.findById(transactionId)
+                    .orElse(transaction);
+
+            return mapToResponse(latest);
+        }
+
+        transaction.setStatus(TransactionStatus.CREDIT_PENDING);
         redisTemplate.delete(otpKey);
+
         completeTransaction(transaction);
+
         return mapToResponse(transaction);
     }
 
@@ -304,6 +338,44 @@ public class TransactionService {
             return;
         }
         completeTransaction(transaction);
+    }
+
+
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void handleExpiredOtps() {
+
+        List<Transaction> pendingTransactions =
+                transactionRepository.findAllByStatus(
+                        TransactionStatus.PENDING_VERIFICATION
+                );
+
+        for (Transaction transaction : pendingTransactions) {
+
+            String otpKey = "verification:otp" + transaction.getId();
+            String storedOtp = redisTemplate.opsForValue().get(otpKey);
+
+            if (storedOtp == null) {
+
+                log.warn(
+                        "OTP expired automatically for transaction {}",
+                        transaction.getId()
+                );
+
+                int updated = transactionRepository.updateStatusIfCurrent(
+                        transaction.getId(),
+                        TransactionStatus.PENDING_VERIFICATION,
+                        TransactionStatus.COMPENSATING
+                );
+
+                if (updated == 1) {
+                    compensateTransaction(
+                            transaction,
+                            "OTP expired. Transaction cancelled and amount refunded. "
+                    );
+                }
+            }
+        }
     }
 
 }
