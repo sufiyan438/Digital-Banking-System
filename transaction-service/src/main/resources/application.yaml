@@ -74,6 +74,8 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 10s
         permittedNumberOfCallsInHalfOpenState: 3
+        ignore-exceptions:
+          - feign.FeignException$BadRequest
 
   retry:
     instances:

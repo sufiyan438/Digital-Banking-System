@@ -2,6 +2,7 @@ package com.banking.transactionservice.service;
 
 import com.banking.transactionservice.client.AccountServiceClient;
 import com.banking.transactionservice.exception.AccountServiceUnavailableException;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,24 @@ public class AccountClientService {
         accountServiceClient.deductBalance(accountNumber, amount);
     }
 
-    private void deductBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
-        throw new AccountServiceUnavailableException("Account service unavailable while debiting account", throwable);
+//    private void deductBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
+//        throw new AccountServiceUnavailableException("Account service unavailable while debiting account", throwable);
+//    }
+
+    private void deductBalanceFallback(
+            String accountNumber,
+            BigDecimal amount,
+            Throwable throwable
+    ) {
+        log.error("DEBIT FALLBACK CAUSE: {}", throwable.getClass().getName(), throwable);
+        if (throwable instanceof FeignException.BadRequest) {
+            throw (FeignException.BadRequest) throwable;
+        }
+
+        throw new AccountServiceUnavailableException(
+                "Account service unavailable while debiting account",
+                throwable
+        );
     }
 
     @Retry(name = "accountBalanceRetry", fallbackMethod = "getBalanceFallback")
