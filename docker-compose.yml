@@ -18,7 +18,6 @@ services:
 
     environment:
       KAFKA_NODE_ID: 1
-
       KAFKA_PROCESS_ROLES: broker,controller
 
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: >
@@ -36,18 +35,24 @@ services:
         PLAINTEXT_HOST://localhost:9092
 
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       KAFKA_CONTROLLER_QUORUM_VOTERS: >
         1@kafka:29093
 
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
 
+    networks:
+      - banking-network
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
     networks:
       - banking-network
 
