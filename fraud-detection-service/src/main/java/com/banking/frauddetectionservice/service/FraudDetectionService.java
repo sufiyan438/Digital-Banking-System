@@ -36,14 +36,12 @@ public class FraudDetectionService {
     private static final String FRAUD_CHECK_CLEAN_RESULT_TOPIC = "fraud.check.clean";
     private static final String VERIFICATION_REQUIRED_TOPIC = "verification.required";
 
+
     public void checkTransaction(Map<String, Object> payload) throws Exception{
         String transactionId = payload.get("transactionId").toString();
 
         if (isAlreadyProcessed(transactionId)) {
-            log.warn(
-                    "Duplicate transaction.initiated event ignored for transaction {}",
-                    transactionId
-            );
+            log.warn("Duplicate transaction.initiated event ignored for transaction {}", transactionId);
             return;
         }
 
@@ -66,12 +64,13 @@ public class FraudDetectionService {
             verificationEvent.put("amount", amount);
             verificationEvent.put("reason", result.getReason());
 
-//            kafkaTemplate.send(VERIFICATION_REQUIRED_TOPIC, transactionId, verificationEvent);
+
             kafkaTemplate.send(VERIFICATION_REQUIRED_TOPIC, transactionId, verificationEvent).get();
             markAsProcessed(transactionId);
         }
         else{
             log.info("Transaction is clean!");
+
             Map<String, Object> transactionCleanEvent = new HashMap<>();
             transactionCleanEvent.put("transactionId", transactionId);
             transactionCleanEvent.put("isFraud", false);
@@ -82,16 +81,23 @@ public class FraudDetectionService {
         }
     }
 
+
     private FraudCheckResult performFraudChecks(String accountNumber, BigDecimal amount, BigDecimal senderBalance){
         if(isVelocityExceeded(accountNumber)){
-            return new FraudCheckResult(true, "Too many transactions in 60 sec. Velocity limit exceeded.");
+            return new FraudCheckResult(true,
+                    "Too many transactions in 60 sec. Velocity limit exceeded.");
         }
+
         if(isAmountSuspicious(accountNumber, amount)){
-            return new FraudCheckResult(true, "Unusual transaction amount. It is 3x your average");
+            return new FraudCheckResult(true,
+                    "Unusual transaction amount. It is 3x your average");
         }
+
         if(senderBalance.compareTo(BigDecimal.ZERO) > 0 && isBalanceCheckFailed(senderBalance, amount)){
-            return new FraudCheckResult(true, "Transaction exceeds 90% of account balance");
+            return new FraudCheckResult(true,
+                    "Transaction exceeds 90% of account balance");
         }
+
         return new FraudCheckResult(false, null);
     }
 
@@ -116,6 +122,8 @@ public class FraudDetectionService {
         return amount.compareTo(threshold) > 0;
     }
 
+
+
     private boolean isVelocityExceeded(String accountNumber){
         String key = "fraud:velocity" + accountNumber;
         Long count = redisTemplate.opsForValue().increment(key);
@@ -127,6 +135,8 @@ public class FraudDetectionService {
         return count != null && count > maxTransactionsPerMinute;
     }
 
+
+
     private boolean isBalanceCheckFailed(BigDecimal senderBalance, BigDecimal amount){
         BigDecimal maxAllowed = senderBalance.multiply(BigDecimal.valueOf(maxBalancePercentage));
         log.info("Balance check - amount: {}, maxAllowed: {}, suspicious: {}",
@@ -134,21 +144,12 @@ public class FraudDetectionService {
         return amount.compareTo(maxAllowed) > 0;
     }
 
+
     private boolean isAlreadyProcessed(String transactionId) {
         String key = "fraud:processed:" + transactionId;
-        return Boolean.TRUE.equals(
-                redisTemplate.hasKey(key)
-        );
-//        Boolean firstTime = redisTemplate.opsForValue()
-//                .setIfAbsent(
-//                        key,
-//                        "processed",
-//                        1,
-//                        TimeUnit.DAYS
-//                );
-//
-//        return Boolean.FALSE.equals(firstTime);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
+
 
     private void markAsProcessed(String transactionId) {
         String key = "fraud:processed:" + transactionId;

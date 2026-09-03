@@ -15,8 +15,13 @@ import java.util.Optional;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, String> {
     boolean existsByAccountNumber(String accountNumber);
+
+
     boolean existsByEmail(String email);
+
+
     Optional<Account> findByAccountNumber(String accountNumber);
+
 
     @Modifying
     @Transactional
@@ -30,6 +35,8 @@ public interface AccountRepository extends JpaRepository<Account, String> {
             @Param("accountNumber") String accountNumber,
             @Param("amount") BigDecimal amount
     );
+
+
 
     @Modifying
     @Transactional

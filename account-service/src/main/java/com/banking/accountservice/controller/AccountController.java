@@ -43,13 +43,15 @@ public class AccountController {
     }
 
     @PutMapping("/{accountNumber}/deduct")
-    public ResponseEntity<String> deductBalance(@PathVariable String accountNumber, @RequestParam BigDecimal amount){
+    public ResponseEntity<String> deductBalance(@PathVariable String accountNumber,
+                                                @RequestParam BigDecimal amount){
         accountService.deductBalance(accountNumber, amount);
         return ResponseEntity.ok("Amount deducted successfully!");
     }
 
     @PutMapping("/{accountNumber}/credit")
-    public ResponseEntity<String> creditBalance(@PathVariable String accountNumber, @RequestParam BigDecimal amount){
+    public ResponseEntity<String> creditBalance(@PathVariable String accountNumber,
+                                                @RequestParam BigDecimal amount){
         accountService.creditBalance(accountNumber, amount);
         return ResponseEntity.ok("Amount credited successfully");
     }
@@ -57,17 +59,10 @@ public class AccountController {
 
 
     @PostMapping("/{accountNumber}/refund")
-    public ResponseEntity<Void> refundBalance(
-            @PathVariable String accountNumber,
-            @RequestParam String transactionId,
-            @RequestParam BigDecimal amount) {
+    public ResponseEntity<Void> refundBalance(@PathVariable String accountNumber,
+                                              @RequestParam String transactionId, @RequestParam BigDecimal amount) {
 
-        accountService.refundBalance(
-                transactionId,
-                accountNumber,
-                amount
-        );
-
+        accountService.refundBalance(transactionId, accountNumber, amount);
         return ResponseEntity.ok().build();
     }
 }

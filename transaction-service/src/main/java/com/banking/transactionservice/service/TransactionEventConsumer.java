@@ -48,19 +48,14 @@ public class TransactionEventConsumer {
     public void consumeVerificationRequired(@Payload Map<String, Object> payload){
         try {
             String transactionId = (String) payload.get("transactionId");
-
             String eventId = "verification-required-" + transactionId;
 
             int inserted = processedEventRepository.insertIfAbsent(
                     eventId,
-                    "VERIFICATION_REQUIRED"
-            );
+                    "VERIFICATION_REQUIRED");
 
             if (inserted == 0) {
-                log.warn(
-                        "Duplicate verification required event ignored for transaction {}",
-                        transactionId
-                );
+                log.warn("Duplicate verification required event ignored for transaction {}", transactionId);
                 return;
             }
 
@@ -91,6 +86,7 @@ public class TransactionEventConsumer {
             otpEvent.put("reason", reason);
             otpEvent.put("otp", otp);
             otpEvent.put("amount", payload.get("amount"));
+
             kafkaTemplate.send(TRANSACTION_OTP_GENERATED_TOPIC, transactionId, otpEvent);
         }
         catch (Exception e){
@@ -104,8 +100,7 @@ public class TransactionEventConsumer {
     public void consumeFraudCheckCleanResult(@Payload Map<String, Object> payload){
         try{
             String transactionId = (String) payload.get("transactionId");
-            String eventId =
-                    "fraud-check-clean-" + transactionId;
+            String eventId = "fraud-check-clean-" + transactionId;
 
             int inserted =
                     processedEventRepository.insertIfAbsent(
@@ -114,14 +109,13 @@ public class TransactionEventConsumer {
                     );
 
             if (inserted == 0) {
-                log.warn(
-                        "Duplicate fraud check clean event ignored for transaction {}",
-                        transactionId
-                );
+                log.warn("Duplicate fraud check clean event ignored for transaction {}", transactionId);
                 return;
             }
+
             transactionService.processCleanResult(transactionId);
         }
+
         catch (Exception e){
             log.error("Error processing fraud check result {}", e.getMessage(), e);
             throw e;
@@ -146,20 +140,11 @@ public class TransactionEventConsumer {
         );
 
         if (inserted == 0) {
-
-            log.warn(
-                    "Duplicate credit failure event ignored for transaction {}",
-                    transactionId
-            );
-
+            log.warn("Duplicate credit failure event ignored for transaction {}", transactionId);
             return;
         }
 
-        log.error(
-                "Credit failure received for transaction {}. Reason: {}",
-                transactionId,
-                reason
-        );
+        log.error("Credit failure received for transaction {}. Reason: {}", transactionId, reason);
 
         int updated = transactionRepository.updateStatusIfCurrent(
                 transactionId,
@@ -171,10 +156,7 @@ public class TransactionEventConsumer {
             meterRegistry
                     .counter("banking.compensation.triggered")
                     .increment();
-            log.warn(
-                    "Transaction {} moved to COMPENSATING",
-                    transactionId
-            );
+            log.warn("Transaction {} moved to COMPENSATING", transactionId);
 
             Transaction transaction = transactionRepository
                     .findById(transactionId)
@@ -214,10 +196,7 @@ public class TransactionEventConsumer {
                             .counter("banking.compensation.succeeded")
                             .increment();
 
-                    log.info(
-                            "Compensation successful. Transaction {} moved to REFUNDED",
-                            transactionId
-                    );
+                    log.info("Compensation successful. Transaction {} moved to REFUNDED", transactionId);
 
                 } else {
 
@@ -249,6 +228,7 @@ public class TransactionEventConsumer {
         }
     }
 
+
     @Transactional
     @KafkaListener(
             topics = "transaction.credit.succeeded",
@@ -264,12 +244,7 @@ public class TransactionEventConsumer {
         );
 
         if (inserted == 0) {
-
-            log.warn(
-                    "Duplicate credit success event ignored for transaction {}",
-                    transactionId
-            );
-
+            log.warn("Duplicate credit success event ignored for transaction {}", transactionId);
             return;
         }
 
@@ -280,16 +255,9 @@ public class TransactionEventConsumer {
         );
 
         if (updated == 1) {
-
-            log.info(
-                    "Transaction {} completed after receiver credit succeeded",
-                    transactionId
-            );
-
+            log.info("Transaction {} completed after receiver credit succeeded", transactionId);
         } else {
-
-            log.warn(
-                    "Ignoring credit success for transaction {} because it is no longer CREDIT_PENDING",
+            log.warn("Ignoring credit success for transaction {} because it is no longer CREDIT_PENDING",
                     transactionId
             );
         }

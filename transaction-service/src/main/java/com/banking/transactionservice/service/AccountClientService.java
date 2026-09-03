@@ -22,22 +22,13 @@ public class AccountClientService {
         accountServiceClient.deductBalance(accountNumber, amount);
     }
 
-//    private void deductBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
-//        throw new AccountServiceUnavailableException("Account service unavailable while debiting account", throwable);
-//    }
-
-    private void deductBalanceFallback(
-            String accountNumber,
-            BigDecimal amount,
-            Throwable throwable
-    ) {
+    private void deductBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
         log.error("DEBIT FALLBACK CAUSE: {}", throwable.getClass().getName(), throwable);
         if (throwable instanceof FeignException.BadRequest) {
             throw (FeignException.BadRequest) throwable;
         }
 
-        throw new AccountServiceUnavailableException(
-                "Account service unavailable while debiting account",
+        throw new AccountServiceUnavailableException("Account service unavailable while debiting account",
                 throwable
         );
     }
@@ -54,21 +45,13 @@ public class AccountClientService {
         );
     }
 
-    @CircuitBreaker(
-            name = "accountService",
-            fallbackMethod = "creditBalanceFallback"
-    )
+    @CircuitBreaker(name = "accountService", fallbackMethod = "creditBalanceFallback")
     public void creditBalance(String accountNumber, BigDecimal amount) {
         accountServiceClient.creditBalance(accountNumber, amount);
     }
 
-    private void creditBalanceFallback(
-            String accountNumber,
-            BigDecimal amount,
-            Throwable throwable
-    ) {
-        throw new AccountServiceUnavailableException(
-                "Account service unavailable while crediting account",
+    private void creditBalanceFallback(String accountNumber, BigDecimal amount, Throwable throwable) {
+        throw new AccountServiceUnavailableException("Account service unavailable while crediting account",
                 throwable
         );
     }
@@ -79,11 +62,9 @@ public class AccountClientService {
         accountServiceClient.refundBalance(accountNumber, transactionId, amount);
     }
 
-    private void refundBalanceFallback(
-            String transactionId,
-            String accountNumber,
-            BigDecimal amount,
-            Throwable throwable) {
-        throw new AccountServiceUnavailableException("Account service unavailable while refunding account", throwable);
+    private void refundBalanceFallback(String transactionId, String accountNumber,
+            BigDecimal amount, Throwable throwable) {
+        throw new AccountServiceUnavailableException("Account service unavailable while refunding account",
+                throwable);
     }
 }

@@ -25,44 +25,26 @@ public class OutboxPublisher {
 
     @Scheduled(fixedDelay = 5000)
     public void publishPendingEvents() {
-
-        List<OutboxEvent> events =
-                outboxEventRepository.findByStatus("PENDING");
-
+        List<OutboxEvent> events = outboxEventRepository.findByStatus("PENDING");
         for (OutboxEvent event : events) {
-
             try {
-
                 Map<String, Object> payload =
                         objectMapper.readValue(
                                 event.getPayload(),
                                 Map.class
                         );
 
-                kafkaTemplate.send(
-                        event.getTopic(),
-                        event.getAggregateId(),
-                        payload
-                ).get();
+                kafkaTemplate.send(event.getTopic(), event.getAggregateId(), payload).get();
 
                 event.setStatus("PUBLISHED");
                 event.setPublishedAt(LocalDateTime.now());
 
                 outboxEventRepository.save(event);
 
-                log.info(
-                        "Outbox event {} published to topic {}",
-                        event.getId(),
-                        event.getTopic()
-                );
+                log.info("Outbox event {} published to topic {}", event.getId(), event.getTopic());
 
             } catch (Exception e) {
-
-                log.error(
-                        "Failed to publish outbox event {}. Reason: {}",
-                        event.getId(),
-                        e.getMessage()
-                );
+                log.error("Failed to publish outbox event {}. Reason: {}", event.getId(), e.getMessage());
             }
         }
     }

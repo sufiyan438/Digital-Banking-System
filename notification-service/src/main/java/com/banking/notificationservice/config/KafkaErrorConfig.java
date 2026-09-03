@@ -22,13 +22,9 @@ public class KafkaErrorConfig {
 
     @Bean
     public ProducerFactory<String, Object> producerFactory() {
-
         Map<String, Object> props = new HashMap<>();
 
-        props.put(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
-                "localhost:9092"
-        );
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 
         DelegatingByTypeSerializer serializer =
                 new DelegatingByTypeSerializer(
@@ -42,34 +38,20 @@ public class KafkaErrorConfig {
                         true
                 );
 
-        return new DefaultKafkaProducerFactory<>(
-                props,
-                new StringSerializer(),
-                serializer
-        );
+        return new DefaultKafkaProducerFactory<>(props, new StringSerializer(), serializer);
     }
 
     @Bean
-    public KafkaTemplate<String, Object> kafkaTemplate(
-            ProducerFactory<String, Object> producerFactory
-    ) {
+    public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
         return new KafkaTemplate<>(producerFactory);
     }
 
     @Bean
-    public DefaultErrorHandler errorHandler(
-            KafkaTemplate<String, Object> kafkaTemplate
-    ) {
+    public DefaultErrorHandler errorHandler(KafkaTemplate<String, Object> kafkaTemplate) {
 
-        DeadLetterPublishingRecoverer recoverer =
-                new DeadLetterPublishingRecoverer(kafkaTemplate);
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
+        FixedBackOff backOff = new FixedBackOff(1000L, 2L);
 
-        FixedBackOff backOff =
-                new FixedBackOff(1000L, 2L);
-
-        return new DefaultErrorHandler(
-                recoverer,
-                backOff
-        );
+        return new DefaultErrorHandler(recoverer, backOff);
     }
 }

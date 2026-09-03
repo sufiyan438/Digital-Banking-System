@@ -15,6 +15,7 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, String> {
     List<Transaction> findAllBySenderAccountNumberOrderByCreatedAtDesc(String accountNumber);
 
+
     @Modifying
     @Transactional
     @Query("""
@@ -28,6 +29,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, String
             @Param("expectedStatus") TransactionStatus expectedStatus,
             @Param("newStatus") TransactionStatus newStatus
     );
+
 
     List<Transaction> findAllByStatus(TransactionStatus status);
 }

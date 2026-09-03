@@ -24,9 +24,12 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping("/create-order")
-    public ResponseEntity<PaymentOrderResponse> createPaymentOrder(@RequestBody @Valid CreatePaymentRequest request)
+    public ResponseEntity<PaymentOrderResponse> createPaymentOrder(
+            @RequestBody @Valid CreatePaymentRequest request)
         throws RazorpayException {
-        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.createPaymentOrder(request));
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(paymentService.createPaymentOrder(request));
     }
 
     //this endpoint will be registered on Razorpay's dashboard. And it will directly call this.

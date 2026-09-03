@@ -55,23 +55,19 @@ public class KafkaErrorConfig {
 
     @Bean
     public KafkaTemplate<String, Object> dltKafkaTemplate(
-            @Qualifier("dltProducerFactory")
-            ProducerFactory<String, Object> producerFactory
-    ) {
+            @Qualifier("dltProducerFactory") ProducerFactory<String, Object> producerFactory) {
+
         return new KafkaTemplate<>(producerFactory);
     }
 
+
     @Bean
     public DefaultErrorHandler errorHandler(
-            @Qualifier("dltKafkaTemplate")
-            KafkaTemplate<String, Object> kafkaTemplate
-    ) {
+            @Qualifier("dltKafkaTemplate") KafkaTemplate<String, Object> kafkaTemplate) {
 
-        DeadLetterPublishingRecoverer recoverer =
-                new DeadLetterPublishingRecoverer(kafkaTemplate);
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate);
 
-        return new DefaultErrorHandler(
-                recoverer,
+        return new DefaultErrorHandler(recoverer,
                 new FixedBackOff(1000L, 2L)
         );
     }

@@ -119,6 +119,7 @@ public class TransactionService {
         return mapToResponse(savedTransaction);
     }
 
+
     private TransactionResponse mapToResponse(Transaction transaction){
         TransactionResponse response = TransactionResponse.builder()
                 .id(transaction.getId())
@@ -136,6 +137,7 @@ public class TransactionService {
         return response;
     }
 
+
     public TransactionResponse getTransaction(String transactionId){
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() ->
@@ -143,12 +145,15 @@ public class TransactionService {
         return mapToResponse(transaction);
     }
 
+
     public List<TransactionResponse> getTransactionHistory(String accountNumber){
         List<Transaction> list = transactionRepository.findAllBySenderAccountNumberOrderByCreatedAtDesc(accountNumber);
         return list.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
+
+
 
     @Transactional
     public TransactionResponse verifyOtp(String transactionId, String otp){
@@ -158,8 +163,9 @@ public class TransactionService {
         String otpKey = "verification:otp" + transactionId;
         String storedOtp = redisTemplate.opsForValue().get(otpKey);
 
+
+        //OTP expired
         if(storedOtp == null){
-            //OTP expired
             log.warn("OTP has expired for transaction {}", transactionId);
 
             int updated = transactionRepository.updateStatusIfCurrent(
@@ -181,8 +187,8 @@ public class TransactionService {
         }
 
 
+        //Block account and refund
         if(!storedOtp.equals(otp)){
-            //Block account and refund
             log.warn("Wrong OTP. Blocking account and refunding money for transaction: {}", transactionId);
 
             int updated = transactionRepository.updateStatusIfCurrent(
@@ -204,12 +210,6 @@ public class TransactionService {
             blockAccountAndCompensate(transaction, "Wrong OTP entered. Transaction cancelled and account blocked. Contact bank for further resolution.");
             return mapToResponse(transaction);
         }
-        //Correct OTP
-//        log.info("OTP verified. Compeleting transaction {}", transaction);
-//        redisTemplate.delete(otpKey);
-//        completeTransaction(transaction);
-//        return mapToResponse(transaction);
-
 
         /*Doing this to ensure that race condition does not happen
         i.e.user enters OTP at end time and scheduler sees it as expired. hence adding this concurrency guard
@@ -244,10 +244,12 @@ public class TransactionService {
         return mapToResponse(transaction);
     }
 
+
     private void compensateTransaction(Transaction transaction, String reason){
         log.warn("SAGA compensation - refunding to: {} amount: {}", transaction.getSenderAccountNumber(), transaction.getAmount());
 
         //Credit money back then publish event to Kafka which will notify user
+
 //        accountServiceClient.creditBalance(transaction.getSenderAccountNumber(), transaction.getAmount());
 
 
@@ -278,6 +280,7 @@ public class TransactionService {
         log.info("SAGA compensation compeleted. {} refunded to {}", transaction.getAmount(), transaction.getSenderAccountNumber());
     }
 
+
     private void blockAccountAndCompensate(Transaction transaction, String reason){
         Map<String, Object> fraudEvent = new HashMap<>();
         fraudEvent.put("transactionId", transaction.getId());
@@ -288,6 +291,7 @@ public class TransactionService {
                 transaction.getSenderAccountNumber());
         compensateTransaction(transaction, reason);
     }
+
 
     private void completeTransaction(Transaction transaction){
 //        transaction.setStatus(TransactionStatus.COMPLETED);
@@ -345,10 +349,7 @@ public class TransactionService {
     @Transactional
     public void handleExpiredOtps() {
 
-        List<Transaction> pendingTransactions =
-                transactionRepository.findAllByStatus(
-                        TransactionStatus.PENDING_VERIFICATION
-                );
+        List<Transaction> pendingTransactions = transactionRepository.findAllByStatus(TransactionStatus.PENDING_VERIFICATION);
 
         for (Transaction transaction : pendingTransactions) {
 
@@ -356,12 +357,7 @@ public class TransactionService {
             String storedOtp = redisTemplate.opsForValue().get(otpKey);
 
             if (storedOtp == null) {
-
-                log.warn(
-                        "OTP expired automatically for transaction {}",
-                        transaction.getId()
-                );
-
+                log.warn("OTP expired automatically for transaction {}", transaction.getId());
                 int updated = transactionRepository.updateStatusIfCurrent(
                         transaction.getId(),
                         TransactionStatus.PENDING_VERIFICATION,
