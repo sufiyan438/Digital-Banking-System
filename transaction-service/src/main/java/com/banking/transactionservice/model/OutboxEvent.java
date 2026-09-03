@@ -24,6 +24,7 @@ public class OutboxEvent {
     private String id;
 
     private String aggregateId;
+    //Basically transaction id
 
     private String eventType;
 

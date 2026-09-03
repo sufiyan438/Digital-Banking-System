@@ -1,5 +1,6 @@
 package com.banking.transactionservice.service;
 
+import com.banking.transactionservice.exception.InvalidTransferException;
 import com.banking.transactionservice.exception.OutboxCreationException;
 import com.banking.transactionservice.exception.TransactionNotFoundException;
 import com.banking.transactionservice.model.OutboxEvent;
@@ -57,6 +58,10 @@ public class TransactionService {
     public TransactionResponse transfer(TransferRequest request){
         log.info("SAGA pattern kicks in here. Transferring INR {} from {} to {}",
                 request.getAmount(), request.getSenderAccountNumber(), request.getRecieverAccountNumber());
+
+        if(request.getSenderAccountNumber().equals(request.getRecieverAccountNumber())){
+            throw new InvalidTransferException("Sender and receiver accounts cannot be the same");
+        }
 
         accountClientService.deductBalance(request.getSenderAccountNumber(), request.getAmount());
         log.info(

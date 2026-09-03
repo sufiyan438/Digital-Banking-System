@@ -263,3 +263,66 @@ public class TransactionEventConsumer {
         }
     }
 }
+
+
+/*
+
+@Transactional can roll back multiple database operations across multiple tables,
+as long as they participate in the same database transaction/data source.
+
+Kafka event
+    ↓
+construct eventId
+    ↓
+insertIfAbsent()
+    ↓
+duplicate?
+   /       \
+ yes        no
+  ↓          ↓
+return     process
+
+                       TransactionEventConsumer
+
+                              Kafka
+                                │
+             ┌──────────────────┼────────────────────┐
+             │                  │                    │
+             ▼                  ▼                    ▼
+      fraud.check.clean  verification.required   credit result
+             │                  │                    │
+             │                  │             ┌──────┴──────┐
+             │                  │             │             │
+             ▼                  ▼             ▼             ▼
+         deduplicate        deduplicate     success        failure
+             │                  │             │             │
+             ▼                  ▼             ▼             ▼
+       continue Saga      generate OTP   COMPLETED    COMPENSATING
+                              │                            │
+                           Redis                         refund
+                              │                            │
+                     PENDING_VERIFICATION               REFUNDED
+                              │
+                     otp.generated
+
+
+| Incoming event                 | Meaning                   | Transaction Service reaction               |
+| ------------------------------ | ------------------------- | ------------------------------------------ |
+| `fraud.check.clean`            | Fraud check passed        | Continue toward receiver credit            |
+| `verification.required`        | Suspicious                | Generate/store OTP                         |
+| `transaction.credit.succeeded` | Receiver got money        | `CREDIT_PENDING → COMPLETED`               |
+| `transaction.credit.failed`    | Receiver didn't get money | `CREDIT_PENDING → COMPENSATING → REFUNDED` |
+
+
+             Kafka event
+                 ↓
+          Which event is it?
+                 ↓
+          Deduplicate event
+                 ↓
+        Is state appropriate?
+                 ↓
+         Perform business action
+                 ↓
+          Change Saga state
+ */

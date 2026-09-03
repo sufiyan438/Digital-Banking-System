@@ -270,19 +270,25 @@ public class AccountService {
     @Transactional
     public void refundBalance(String transactionId, String accountNumber, BigDecimal amount) {
 
-        if (processedRefundRepository.existsById(transactionId)) {
-            log.warn("Refund already processed for transaction {}. Skipping.", transactionId);
+//        if (processedRefundRepository.existsById(transactionId)) {
+//            log.warn("Refund already processed for transaction {}. Skipping.", transactionId);
+//            return;
+//        }
+
+        int inserted = processedRefundRepository.insertIfAbsent(transactionId);
+        if (inserted == 0) {
+            log.warn("Refund already processed for transaction {}", transactionId);
             return;
         }
 
         creditBalance(accountNumber, amount);
 
-        ProcessedRefund processedRefund = ProcessedRefund.builder()
-                .transactionId(transactionId)
-                .processedAt(LocalDateTime.now())
-                .build();
+//        ProcessedRefund processedRefund = ProcessedRefund.builder()
+//                .transactionId(transactionId)
+//                .processedAt(LocalDateTime.now())
+//                .build();
 
-        processedRefundRepository.save(processedRefund);
+//        processedRefundRepository.save(processedRefund);
         log.info("Refund processed for transaction {}. Account: {}, Amount: {}",
                 transactionId, accountNumber, amount);
     }

@@ -36,4 +36,9 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ex.contentUTF8());
     }
+
+    @ExceptionHandler(InvalidTransferException.class)
+    public ResponseEntity<String> handleOutboxCreation(InvalidTransferException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+    }
 }

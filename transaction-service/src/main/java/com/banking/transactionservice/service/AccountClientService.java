@@ -15,6 +15,24 @@ import java.math.BigDecimal;
 @Slf4j
 @RequiredArgsConstructor
 public class AccountClientService {
+
+    /*
+
+    This is a wrapper class for feign client as Resilience4j behavior is added here.
+    Circuit breaker checks the states:open, closed, half open before sending the call
+
+    Retry is used to GET balance from account service and is not changing any data,
+    hence retry is permissible here.
+
+    Separated safe reads from financial mutations. Balance reads use retry
+    because they are idempotent, while debit, credit and refund calls are protected by circuit breakers
+    without blind retries. For debit, I also distinguish business errors such as HTTP 400 from
+    infrastructure failures, so insufficient balance is not misclassified as Account Service unavailability
+     */
+
+
+
+
     private final AccountServiceClient accountServiceClient;
 
     @CircuitBreaker(name = "accountService", fallbackMethod = "deductBalanceFallback")

@@ -21,3 +21,8 @@ public class ProcessedRefund {
 
     private LocalDateTime processedAt;
 }
+
+/*
+this class is needed for business level idempotency
+to check if this refund has already been processed
+ */

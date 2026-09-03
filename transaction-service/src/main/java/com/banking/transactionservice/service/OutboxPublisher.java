@@ -34,7 +34,25 @@ public class OutboxPublisher {
                                 Map.class
                         );
 
+                /*
+
+                stored in DB as this JSON string. Hence object mapper is needed,
+                to convert it back into Map
+
+                * {
+    "transactionId": "TX123",
+    "senderAccountNumber": "111",
+    "receiverAccountNumber": "222",
+    "amount": 1000
+}
+
+                * */
                 kafkaTemplate.send(event.getTopic(), event.getAggregateId(), payload).get();
+
+                /*
+                * without .get() it would start sending to kafka and even set as published and save it
+                * with .get() it waits until it is confirmed to be received be kafka and then saves it
+                */
 
                 event.setStatus("PUBLISHED");
                 event.setPublishedAt(LocalDateTime.now());
