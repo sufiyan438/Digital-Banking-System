@@ -1,0 +1,540 @@
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 300 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 10.00 iterations/s for 1m0s (maxVUs: 200-300, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✓ 'p(95)<20000' p(95)=4025
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=21.787
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 601     9.385999/s
+    checks_succeeded...: 100.00% 601 out of 601
+    checks_failed......: 0.00%   0 out of 601
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 601    9.385999/s
+    saga_duration_ms...............: avg=3086.221298 min=2013  med=3021   max=4055     p(90)=4022   p(95)=4025
+    transfer_accepted..............: 601    9.385999/s
+    transfer_api_duration_ms.......: avg=12.505832   min=3.854 med=9.793  max=351.831  p(90)=18.536 p(95)=21.787
+
+    HTTP
+    http_req_duration..............: avg=5.02ms      min=780µs med=2.64ms max=351.83ms p(90)=11.4ms p(95)=14.78ms
+      { expected_response:true }...: avg=5.02ms      min=780µs med=2.64ms max=351.83ms p(90)=11.4ms p(95)=14.78ms
+    http_req_failed................: 0.00%  0 out of 2442
+    http_reqs......................: 2442   38.137455/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.08s       min=2.01s med=3.02s  max=4.05s    p(90)=4.02s  p(95)=4.02s
+    iterations.....................: 601    9.385999/s
+    vus............................: 1      min=1         max=37
+    vus_max........................: 200    min=200       max=200
+
+    NETWORK
+    data_received..................: 1.1 MB 18 kB/s
+    data_sent......................: 398 kB 6.2 kB/s
+
+
+
+
+running (1m04.0s), 000/200 VUs, 601 complete and 0 interrupted iterations
+transfers ✓ [========================] 000/200 VUs  1m0s  10.00 iters/s
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 300 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 20.00 iterations/s for 1m0s (maxVUs: 200-300, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✓ 'p(95)<20000' p(95)=5015
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=14.4026
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 1200    18.757718/s
+    checks_succeeded...: 100.00% 1200 out of 1200
+    checks_failed......: 0.00%   0 out of 1200
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 1200   18.757718/s
+    saga_duration_ms...............: avg=3697.191667 min=2008  med=4011   max=5135     p(90)=4035    p(95)=5015
+    transfer_accepted..............: 1200   18.757718/s
+    transfer_api_duration_ms.......: avg=7.518315    min=2.789 med=5.6995 max=175.177  p(90)=11.6193 p(95)=14.4026
+
+    HTTP
+    http_req_duration..............: avg=2.99ms      min=490µs med=1.44ms max=175.17ms p(90)=6.51ms  p(95)=9.65ms
+      { expected_response:true }...: avg=2.99ms      min=490µs med=1.44ms max=175.17ms p(90)=6.51ms  p(95)=9.65ms
+    http_req_failed................: 0.00%  0 out of 5617
+    http_reqs......................: 5617   87.801751/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.69s       min=2s    med=4.01s  max=5.13s    p(90)=4.03s   p(95)=5.01s
+    iterations.....................: 1200   18.757718/s
+    vus............................: 22     min=20        max=89
+    vus_max........................: 200    min=200       max=200
+
+    NETWORK
+    data_received..................: 2.7 MB 41 kB/s
+    data_sent......................: 888 kB 14 kB/s
+
+
+
+
+running (1m04.0s), 000/200 VUs, 1200 complete and 0 interrupted iterations
+transfers ✓ [========================] 000/200 VUs  1m0s  20.00 iters/s
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 600 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 40.00 iterations/s for 1m0s (maxVUs: 400-600, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✓ 'p(95)<20000' p(95)=9019
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=10.2432
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 2400    35.620026/s
+    checks_succeeded...: 100.00% 2400 out of 2400
+    checks_failed......: 0.00%   0 out of 2400
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 2400   35.620026/s
+    saga_duration_ms...............: avg=6602.02  min=2011  med=7012   max=10040    p(90)=8030   p(95)=9019
+    transfer_accepted..............: 2400   35.620026/s
+    transfer_api_duration_ms.......: avg=6.232581 min=2.055 med=3.9925 max=229.085  p(90)=8.5751 p(95)=10.2432
+
+    HTTP
+    http_req_duration..............: avg=2.15ms   min=426µs med=1.15ms max=229.08ms p(90)=3.86ms p(95)=5.76ms
+      { expected_response:true }...: avg=2.15ms   min=426µs med=1.15ms max=229.08ms p(90)=3.86ms p(95)=5.76ms
+    http_req_failed................: 0.00%  0 out of 18198
+    http_reqs......................: 18198  270.088849/s
+
+    EXECUTION
+    iteration_duration.............: avg=6.6s     min=2.01s med=7.01s  max=10.04s   p(90)=8.02s  p(95)=9.01s
+    iterations.....................: 2400   35.620026/s
+    vus............................: 18     min=18         max=308
+    vus_max........................: 400    min=400        max=400
+
+    NETWORK
+    data_received..................: 8.6 MB 128 kB/s
+    data_sent......................: 2.7 MB 39 kB/s
+
+
+
+
+running (1m07.4s), 000/400 VUs, 2400 complete and 0 interrupted iteration
+transfers ✓ [==========================] 000/400 VUs  1m0s  40.00 iters/s
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1200 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 60.00 iterations/s for 1m0s (maxVUs: 1000-1200, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✗ 'p(95)<20000' p(95)=24135
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=23.5036
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 3513    44.444417/s
+    checks_succeeded...: 100.00% 3513 out of 3513
+    checks_failed......: 0.00%   0 out of 3513
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 3513   44.444417/s
+    saga_duration_ms...............: avg=15489.623399 min=3008  med=16034  max=28171    p(90)=23046  p(95)=24135
+    transfer_accepted..............: 3513   44.444417/s
+    transfer_api_duration_ms.......: avg=8.097286     min=1.583 med=3.495  max=222.01   p(90)=8.5588 p(95)=23.5036
+
+    HTTP
+    http_req_duration..............: avg=3.38ms       min=242µs med=1.13ms max=222.01ms p(90)=4.54ms p(95)=8.87ms
+      { expected_response:true }...: avg=3.38ms       min=242µs med=1.13ms max=222.01ms p(90)=4.54ms p(95)=8.87ms
+    http_req_failed................: 0.00%  0 out of 57712
+    http_reqs......................: 57712  730.138397/s
+
+    EXECUTION
+    dropped_iterations.............: 88     1.113324/s
+    iteration_duration.............: avg=15.48s       min=3s    med=16.03s max=28.17s   p(90)=23.04s p(95)=24.13s
+    iterations.....................: 3513   44.444417/s
+    vus............................: 5      min=5          max=1083
+    vus_max........................: 1088   min=1000       max=1088
+
+    NETWORK
+    data_received..................: 28 MB  348 kB/s
+    data_sent......................: 7.8 MB 99 kB/s
+
+
+
+
+running (1m19.0s), 0000/1088 VUs, 3513 complete and 0 interrupted iterations
+transfers ✓ [========================] 0000/1088 VUs  1m0s  60.00 iters/s
+ERRO[0082] thresholds on metrics 'saga_duration_ms' have been crossed
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1800 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 60.00 iterations/s for 1m0s (maxVUs: 1500-1800, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✗ 'p(95)<20000' p(95)=23054
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=10.219
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 3601    45.678665/s
+    checks_succeeded...: 100.00% 3601 out of 3601
+    checks_failed......: 0.00%   0 out of 3601
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 3601   45.678665/s
+    saga_duration_ms...............: avg=14363.063038 min=3007  med=15020  max=27217    p(90)=21059  p(95)=23054
+    transfer_accepted..............: 3601   45.678665/s
+    transfer_api_duration_ms.......: avg=5.247721     min=1.474 med=3.17   max=208.672  p(90)=5.99   p(95)=10.219
+
+    HTTP
+    http_req_duration..............: avg=2.48ms       min=353µs med=1.09ms max=208.67ms p(90)=3.9ms  p(95)=6.31ms
+      { expected_response:true }...: avg=2.48ms       min=353µs med=1.09ms max=208.67ms p(90)=3.9ms  p(95)=6.31ms
+    http_req_failed................: 0.00%  0 out of 55165
+    http_reqs......................: 55165  699.76772/s
+
+    EXECUTION
+    iteration_duration.............: avg=14.36s       min=3s    med=15.01s max=27.21s   p(90)=21.05s p(95)=23.05s
+    iterations.....................: 3601   45.678665/s
+    vus............................: 46     min=46         max=1085
+    vus_max........................: 1500   min=1500       max=1500
+
+    NETWORK
+    data_received..................: 26 MB  333 kB/s
+    data_sent......................: 7.5 MB 95 kB/s
+
+
+
+
+running (1m18.8s), 0000/1500 VUs, 3601 complete and 0 interrupted iterations
+transfers ✓ [========================] 0000/1500 VUs  1m0s  60.00 iters/s
+ERRO[0082] thresholds on metrics 'saga_duration_ms' have been crossed
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1800 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 50.00 iterations/s for 1m0s (maxVUs: 1500-1800, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✓ 'p(95)<20000' p(95)=14150.7
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=8.80155
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 3000    42.011399/s
+    checks_succeeded...: 100.00% 3000 out of 3000
+    checks_failed......: 0.00%   0 out of 3000
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 3000   42.011399/s
+    saga_duration_ms...............: avg=10035.985667 min=3009  med=10023  max=17175    p(90)=13133  p(95)=14150.7
+    transfer_accepted..............: 3000   42.011399/s
+    transfer_api_duration_ms.......: avg=5.776452     min=1.666 med=3.6825 max=190.181  p(90)=6.5863 p(95)=8.80155
+
+    HTTP
+    http_req_duration..............: avg=2.21ms       min=394µs med=1.11ms max=190.18ms p(90)=3.54ms p(95)=4.81ms
+      { expected_response:true }...: avg=2.21ms       min=394µs med=1.11ms max=190.18ms p(90)=3.54ms p(95)=4.81ms
+    http_req_failed................: 0.00%  0 out of 33021
+    http_reqs......................: 33021  462.419473/s
+
+    EXECUTION
+    iteration_duration.............: avg=10.03s       min=3s    med=10.02s max=17.17s   p(90)=13.13s p(95)=14.15s
+    iterations.....................: 3000   42.011399/s
+    vus............................: 28     min=28         max=615
+    vus_max........................: 1500   min=1500       max=1500
+
+    NETWORK
+    data_received..................: 16 MB  220 kB/s
+    data_sent......................: 4.6 MB 65 kB/s
+
+
+
+
+running (1m11.4s), 0000/1500 VUs, 3000 complete and 0 interrupted iterations
+transfers ✓ [========================] 0000/1500 VUs  1m0s  50.00 iters/s
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
+
+
+
+
+
+
+
+
+
+
+
+
+
+(base) bilal@Sufiyans-MacBook-Pro banking-system % k6 run load-tests/transfer-load-test.js
+
+         /\      Grafana   /‾‾/
+    /\  /  \     |\  __   /  /
+   /  \/    \    | |/ /  /   ‾‾\
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/
+
+
+     execution: local
+        script: load-tests/transfer-load-test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 1800 max VUs, 1m45s max duration (incl. graceful stop):
+              * transfers: 55.00 iterations/s for 1m0s (maxVUs: 1500-1800, gracefulStop: 45s)
+
+
+
+  █ THRESHOLDS
+
+    http_req_failed
+    ✓ 'rate<0.01' rate=0.00%
+
+    saga_duration_ms
+    ✓ 'p(95)<20000' p(95)=17039
+
+    transfer_api_duration_ms
+    ✓ 'p(95)<100' p(95)=7.45
+
+
+  █ TOTAL RESULTS
+
+    checks_total.......: 3301    44.215402/s
+    checks_succeeded...: 100.00% 3301 out of 3301
+    checks_failed......: 0.00%   0 out of 3301
+
+    ✓ transfer accepted
+
+    CUSTOM
+    saga_completed.................: 3301   44.215402/s
+    saga_duration_ms...............: avg=11427.192669 min=2010  med=11040  max=21040    p(90)=16031  p(95)=17039
+    transfer_accepted..............: 3301   44.215402/s
+    transfer_api_duration_ms.......: avg=4.559361     min=1.618 med=3.411  max=182.239  p(90)=5.829  p(95)=7.45
+
+    HTTP
+    http_req_duration..............: avg=1.69ms       min=427µs med=1.07ms max=182.23ms p(90)=3.02ms p(95)=3.95ms
+      { expected_response:true }...: avg=1.69ms       min=427µs med=1.07ms max=182.23ms p(90)=3.02ms p(95)=3.95ms
+    http_req_failed................: 0.00%  0 out of 40937
+    http_reqs......................: 40937  548.332605/s
+
+    EXECUTION
+    iteration_duration.............: avg=11.42s       min=2.01s med=11.04s max=21.04s   p(90)=16.03s p(95)=17.03s
+    iterations.....................: 3301   44.215402/s
+    vus............................: 31     min=31         max=799
+    vus_max........................: 1500   min=1500       max=1500
+
+    NETWORK
+    data_received..................: 20 MB  261 kB/s
+    data_sent......................: 5.7 MB 76 kB/s
+
+
+
+
+running (1m14.7s), 0000/1500 VUs, 3301 complete and 0 interrupted iterations
+transfers ✓ [========================] 0000/1500 VUs  1m0s  55.00 iters/s
+(base) bilal@Sufiyans-MacBook-Pro banking-system %
